@@ -1,20 +1,34 @@
 module Main
 
--- GameState keeps track of the smallest peg in total, and then the smallest peg
--- on each tower from left to right
-data GameState : Nat -> Nat -> Nat -> Nat -> Type where
-     InitialLeft : (biggest : Nat) -> GameState biggest biggest Z Z
-     InitialMid : (biggest : Nat) -> GameState biggest Z biggest Z
-     InitialRight : (biggest : Nat) -> GameState biggest Z Z biggest
-     NextLeft : (prevState : GameState (S k) _ b c) -> GameState k k b c
-     NextMid : (prevState : GameState (S k) a _ c) -> GameState k a k c
-     NextRight : (prevState : GameState (S k) a b _) -> GameState k a b k
+data GameState : Type where
+     Initial : GameState
+     LeftPeg : GameState -> GameState
+     MidPeg : GameState -> GameState
+     RightPeg : GameState -> GameState
 
-data CompleteState : Nat -> Nat -> Nat -> Type where
-     MkState : (GameState Z a b c) -> CompleteState a b c
+-- do we even need the leftPrefixLength?
+data LeftMidPrefix : (state : GameState) -> (leftPrefixLength : Nat) -> (suffix : GameState) -> Type where
+     Here : LeftMidPrefix (MidPeg suffix) Z suffix
+     There : (later : LeftMidPrefix seq k suffix) -> LeftMidPrefix (LeftPeg seq) (S k) suffix
+
+data Move : Type where
+     MidToRight : (prf : LeftMidPrefix st k suf) -> (st : GameState) -> Move
+
+data UnprovenMove = LeftMid
+                  | LeftRight
+                  | MidLeft
+                  | MidRight
+                  | RightLeft
+                  | RightMid
+
+solve : GameState -> GameState
+solve Initial = Initial
+solve (LeftPeg x) = ?solve_rhs_2
+solve (MidPeg x) = ?solve_rhs_3
+solve (RightPeg x) = ?solve_rhs_4
 
 main : IO ()
 main = let
-           state = MkState (NextRight $ NextLeft (InitialRight 2))
+           state = LeftPeg $ LeftPeg $ RightPeg Initial
        in
            putStrLn "Hello, world!"
