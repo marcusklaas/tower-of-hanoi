@@ -9,28 +9,18 @@ inductive column
 -- okay so we encode valid states as fixed length sequences
 def validstate (n : ℕ) := vector column n
 
-def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector α n
-| ⟨ [], h ⟩ ⟨ i, _ ⟩ a := begin
-    have ofc : n = 0 := begin
-        simp at h,
-        exact eq.symm h,
-    end,
-    rw ofc at _x,
-    sorry
-end
-| ⟨ x :: xs, h ⟩ ⟨ nat.zero, _ ⟩ a := ⟨ a :: xs , by { rw ←h, refl } ⟩ 
-| v@⟨ x :: xs, h ⟩ ⟨ nat.succ m, pf ⟩ a :=
-    vector.cons x (update_nth ⟨ xs , begin
-        rw ←h,
-        sorry
-    end ⟩ ⟨ m, begin
-        have ofc : m < nat.succ m := begin
-            sorry
-        end,
-        exact lt_trans ofc pf
-    end ⟩  a)
+#check lt_irrefl
+#check linear_order
+#check well_founded
+#check nat.add_one_ne_zero
 
-#check fin.succ
+#check nat.sub
+
+def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector α n
+| v i a := vector.map₂ (λ b idx, if idx = i then a else b) v $ vector.of_fn id
+-- | ⟨list.cons b v, h2⟩ ⟨nat.succ i, h⟩ a := begin
+--     exact (vector.cons b (update_nth ⟨v, _⟩ ⟨i, _⟩ a))
+-- end
 
 lemma update_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a b : α)
     : vector.cons b (update_nth v i a) = update_nth (vector.cons b v) (fin.succ i) a :=
@@ -52,20 +42,35 @@ def one_step {n : ℕ} : validstate n → validstate n → Prop
 
 def multi_step {n : ℕ} : validstate n → validstate n → Prop := refl_trans one_step
 
-lemma one_step_symm {n : ℕ} (s1 s2 : validstate n) : one_step s1 s2 → one_step s2 s1 :=
+lemma one_step_symm {n : ℕ} {s1 s2 : validstate n} (h: one_step s1 s2) : one_step s2 s1 :=
 begin
-    intro h,
     cases h,
     cases h_h,
     cases h_h_h,
     simp [movestone, update_nth] at h_h_h_h,
+    rw one_step,
+    apply exists.intro h_w,
+    apply exists.intro h_h_w,
     sorry
 end
 
--- TODO: show that multi_step is symmetric
--- TODO: show that multi_step is transitive
+lemma multi_step_transitive {n : ℕ} {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
+begin
+  induction hbc,
+  case refl_trans.refl { assumption },
+  case refl_trans.tail : c d hbc hcd hac { exact hac.tail hcd }
+end
 
---lemma multi_step_equivalence {n : ℕ}: reflexive multi_step
+lemma multi_step_symmetric {n : ℕ} {a b : validstate n} (hab : multi_step a b) : multi_step b a :=
+begin
+    induction hab,
+    {
+        exact refl_trans.refl
+    },
+    case refl_trans.tail : c d hbc hcd hac {
+        exact multi_step_transitive (refl_trans.tail refl_trans.refl (one_step_symm hcd)) hac
+    }
+end
 
 -- picks an unused column
 def third_column : column → column → column
@@ -87,7 +92,7 @@ begin
     }
 end
 
-def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, sorry⟩ 
+def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, begin sorry end⟩  
 
 lemma equiv_cons {n : ℕ} (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
     : multi_step (vector.cons a s1) (vector.cons a s2) :=
@@ -111,6 +116,7 @@ begin
         },
         {
             -- repackage IH pf
+            intro j,
             sorry
         }
     }
