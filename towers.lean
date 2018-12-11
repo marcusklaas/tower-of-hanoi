@@ -37,6 +37,38 @@ begin
     refl -- hell yeah boiiii
 end
 
+-- TODO: make α and n variables?
+lemma list_update_nth_idempotent {α : Type} (l : list α) (i : ℕ) (a : α)
+    : list.update_nth l i a = list.update_nth (list.update_nth l i a) i a :=
+begin
+    induction l generalizing i, -- awwww yisss, generalizing ftw
+    {
+        refl
+    },
+    {
+        cases i,
+        {
+            refl,
+        },
+        {
+            simp [list.update_nth, *],
+            exact l_ih i
+        }
+    }
+end
+
+-- FIXME: these lemmas are likely useless lol
+lemma update_nth_idempotent {α : Type} {n : ℕ} (v : vector α n) (i : fin n) (a : α)
+    : update_nth v i a = update_nth (update_nth v i a) i a :=
+begin
+    cases v,
+    repeat { rw [update_nth] } ,
+    cases i,
+    simp *,
+    have yolo := list_update_nth_idempotent v_val i_val a,
+    sorry -- ARGH, feels like we're close!
+end
+
 lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
     : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
 begin
@@ -76,8 +108,25 @@ begin
     rw one_step,
     apply exists.intro h_w,
     apply exists.intro h_h_w,
-    apply and.intro,
-    sorry
+    apply exists.intro,
+    {
+        rw movestone,
+        -- rw h_h_h_h,
+        -- rw ←update_nth_idempotent,
+        sorry
+    },
+    {
+        intros j hj,
+        specialize h_h_h_w j hj,
+        cases h_h_h_w,
+        apply and.intro,
+        {
+            sorry
+        },
+        {
+            sorry
+        }
+    }
 end
 
 lemma multi_step_transitive {n : ℕ} {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
@@ -147,9 +196,9 @@ begin
             --specialize h_a_1_h_h_w j,
             apply and.intro,
             {
-                sorry
-                --rw ←(vector_nth_helper h_b),
+                have yolo := vector_nth_helper h_b h_a_1_w a,
 
+                sorry
             },
             {
                 rw vector_nth_helper,
@@ -160,13 +209,28 @@ begin
 end
 
 #check nat.le
+#check fin.succ
 
 lemma all_states_equiv {n : ℕ} (s1 s2 : validstate n) : multi_step s1 s2 :=
 begin
     induction n,
     {   
         have s1_eq_s2 : s1 = s2 := begin
-            sorry
+            cases s1,
+            cases s2,
+            cases s1_val,
+            {
+                cases s2_val,
+                {
+                    refl,
+                },
+                {
+                    cases s2_property,
+                }
+            },
+            {
+                cases s1_property,
+            }
         end,
         rw s1_eq_s2,
         exact refl_trans.refl,
@@ -229,7 +293,6 @@ begin
         have small_step : one_step (vector.cons s1_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n))
             (vector.cons s2_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n)) := begin
             rw one_step,
-            have zero_lt_succ : 0 < nat.succ n_n := begin sorry end,
 
             apply exists.intro (zero_fin n_n),
             {
@@ -237,12 +300,34 @@ begin
                 apply exists.intro,
                 {
                     rw movestone,
-                    sorry
+                    refl,
                 },
                 {
                     intros j h,
                     rw zero_fin at h,
-                    sorry -- should be ez contradiction: n < 0
+                    apply and.intro,
+                    {
+                        cases j,
+                        cases j_val,
+                        {
+                            cases h, -- j_val of type succ
+                        },
+                        {
+                            rw ←fin.succ,
+                            {
+                                rw (vector_nth_helper),
+                                have future_lemma : ∀ a k idx, vector.nth (vector.repeat a k) idx = a := sorry,
+                                rw future_lemma _ n_n _,
+                                exact (third_column_unused s1_val_hd s2_val_hd).right
+                            },
+                            {
+                                exact nat.lt_of_succ_lt_succ j_is_lt
+                            }
+                        },
+                    },
+                    {
+                        sorry
+                    }
                 }
             }            
         end,
