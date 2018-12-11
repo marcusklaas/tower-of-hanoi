@@ -6,6 +6,8 @@ inductive column
 | middle : column
 | right : column
 
+-- TODO: apparently arrays could be very natural in this situation
+
 -- okay so we encode valid states as fixed length sequences
 def validstate (n : ℕ) := vector column n
 
@@ -14,27 +16,10 @@ def validstate (n : ℕ) := vector column n
 #check well_founded
 #check nat.add_one_ne_zero
 
-#check nat.sub
-
 lemma update_preserve_length {α : Type} {a : α} (l : list α) : 
     ∀ i, list.length l = list.length (list.update_nth l i a) :=
 begin
-    induction l,
-    {
-        intro i,
-        simp [list.update_nth, list.length]
-    },
-    {
-        intro i,
-        cases i,
-        {
-            simp [list.update_nth, list.length],
-        },
-        {
-            simp [list.update_nth, list.length],
-            rw l_ih i,
-        }
-    }
+    induction l; intro i; cases i; simp [list.update_nth, list.length]; rw l_ih i
 end
 
 def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector α n
@@ -42,22 +27,35 @@ def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector �
 
 lemma update_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a b : α)
     : vector.cons b (update_nth v i a) = update_nth (vector.cons b v) (fin.succ i) a :=
-sorry
+begin
+    cases v,
+    simp [update_nth, *],
+    cases i,
+    rw fin.succ,
+    simp [vector.cons],
+    rw update_nth,
+    refl -- hell yeah boiiii
+end
+
+lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
+    : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
+begin
+    induction n,
+    {
+        cases i,
+        cases i_is_lt
+    },
+    {
+        cases i,
+        cases v,
+        simp [fin.succ, vector.cons, vector.nth],
+        refl
+    } -- awww yiss
+end
 
 def movestone {n : ℕ} (s : validstate n) (i : fin n) (dest : column)
     (valid_move: ∀j, j > i → vector.nth s j ≠ dest ∧ vector.nth s j ≠ vector.nth s i) : validstate n :=
 update_nth s i dest
-
-#check nat.le
-#check list.update_nth_helper
-
-example {n : ℕ} : ¬ (n < 0) := begin
-    intro h,
-    cases h
-end
-
-
-
 
 /-- `refl_trans r`: relexive and transitive closure of `r` -/
 inductive refl_trans {α : Sort*} (r : α → α → Prop) (a : α) : α → Prop
@@ -79,6 +77,7 @@ begin
     apply exists.intro h_w,
     apply exists.intro h_h_w,
     apply and.intro,
+    sorry
 end
 
 lemma multi_step_transitive {n : ℕ} {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
@@ -119,20 +118,7 @@ begin
     }
 end
 
-def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, begin sorry end⟩
-
-lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
-    : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
-begin
-    induction n,
-    {
-        cases i,
-        cases i_is_lt
-    },
-    {
-        sorry
-    }
-end
+def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, dec_trivial⟩
 
 lemma equiv_cons {n : ℕ} (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
     : multi_step (vector.cons a s1) (vector.cons a s2) :=
