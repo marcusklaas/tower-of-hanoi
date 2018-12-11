@@ -16,11 +16,29 @@ def validstate (n : ℕ) := vector column n
 
 #check nat.sub
 
+lemma update_preserve_length {α : Type} {a : α} (l : list α) : 
+    ∀ i, list.length l = list.length (list.update_nth l i a) :=
+begin
+    induction l,
+    {
+        intro i,
+        simp [list.update_nth, list.length]
+    },
+    {
+        intro i,
+        cases i,
+        {
+            simp [list.update_nth, list.length],
+        },
+        {
+            simp [list.update_nth, list.length],
+            rw l_ih i,
+        }
+    }
+end
+
 def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector α n
-| v i a := vector.map₂ (λ b idx, if idx = i then a else b) v $ vector.of_fn id
--- | ⟨list.cons b v, h2⟩ ⟨nat.succ i, h⟩ a := begin
---     exact (vector.cons b (update_nth ⟨v, _⟩ ⟨i, _⟩ a))
--- end
+| ⟨l, h⟩ i a := ⟨ list.update_nth l i.val a, by { rw ←(update_preserve_length l), exact h } ⟩ 
 
 lemma update_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a b : α)
     : vector.cons b (update_nth v i a) = update_nth (vector.cons b v) (fin.succ i) a :=
@@ -30,7 +48,16 @@ def movestone {n : ℕ} (s : validstate n) (i : fin n) (dest : column)
     (valid_move: ∀j, j > i → vector.nth s j ≠ dest ∧ vector.nth s j ≠ vector.nth s i) : validstate n :=
 update_nth s i dest
 
-#check list.cons
+#check nat.le
+#check list.update_nth_helper
+
+example {n : ℕ} : ¬ (n < 0) := begin
+    intro h,
+    cases h
+end
+
+
+
 
 /-- `refl_trans r`: relexive and transitive closure of `r` -/
 inductive refl_trans {α : Sort*} (r : α → α → Prop) (a : α) : α → Prop
@@ -51,7 +78,7 @@ begin
     rw one_step,
     apply exists.intro h_w,
     apply exists.intro h_h_w,
-    sorry
+    apply and.intro,
 end
 
 lemma multi_step_transitive {n : ℕ} {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
@@ -92,7 +119,20 @@ begin
     }
 end
 
-def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, begin sorry end⟩  
+def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, begin sorry end⟩
+
+lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
+    : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
+begin
+    induction n,
+    {
+        cases i,
+        cases i_is_lt
+    },
+    {
+        sorry
+    }
+end
 
 lemma equiv_cons {n : ℕ} (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
     : multi_step (vector.cons a s1) (vector.cons a s2) :=
@@ -117,11 +157,23 @@ begin
         {
             -- repackage IH pf
             intro j,
-            sorry
+            intro h2,
+            --specialize h_a_1_h_h_w j,
+            apply and.intro,
+            {
+                sorry
+                --rw ←(vector_nth_helper h_b),
+
+            },
+            {
+                rw vector_nth_helper,
+                sorry
+            }
         }
     }
 end
 
+#check nat.le
 
 lemma all_states_equiv {n : ℕ} (s1 s2 : validstate n) : multi_step s1 s2 :=
 begin
@@ -198,7 +250,8 @@ begin
                 apply exists.intro s2_val_hd,
                 apply exists.intro,
                 {
-                    refl,
+                    rw movestone,
+                    sorry
                 },
                 {
                     intros j h,
@@ -214,7 +267,6 @@ begin
     }
 end
 
-#check fin.
 
 theorem towers_hanoi_solvable : ∀ n : ℕ, multi_step (vector.repeat column.left n) (vector.repeat column.right n) :=
     λ n, all_states_equiv (vector.repeat column.left n) (vector.repeat column.right n)
