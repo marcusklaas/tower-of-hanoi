@@ -169,6 +169,10 @@ end
 
 def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, dec_trivial⟩
 
+lemma fin_pred {n : ℕ} (j : fin (nat.succ n)) (k : fin n) (h : j > fin.succ k)
+    : ∃ (i : fin n), fin.succ i = j ∧ i > k
+:= sorry
+
 lemma equiv_cons {n : ℕ} (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
     : multi_step (vector.cons a s1) (vector.cons a s2) :=
 begin
@@ -191,24 +195,16 @@ begin
         },
         {
             -- repackage IH pf
-            intro j,
-            intro h2,
-            --specialize h_a_1_h_h_w j,
-            apply and.intro,
-            {
-                have yolo := vector_nth_helper h_b h_a_1_w a,
-
-                sorry
-            },
-            {
-                rw vector_nth_helper,
-                sorry
-            }
+            intros j h2,
+            rw vector_nth_helper,
+            have yolo := fin_pred j h_a_1_w h2,
+            cases yolo,
+            rw ←yolo_h.left,
+            rw vector_nth_helper,
+            exact (h_a_1_h_h_w yolo_w yolo_h.right)
         }
     }
 end
-
-#check list.repeat
 
 lemma nth_of_list_repeat {α : Type} (a : α) (i n : ℕ) (h : i < list.length (list.repeat a n))
     : list.nth_le (list.repeat a n) i h = a :=
@@ -255,8 +251,11 @@ end
 
 -- TODO: can we do without the lt arg?
 lemma zeroth_of_cons {α : Type} {n : ℕ} (a : α) (v : vector α n) (lt : 0 < nat.succ n)
-    : vector.nth (vector.cons a v) ⟨0, lt⟩ = a
-    := sorry              
+    : vector.nth (vector.cons a v) ⟨0, lt⟩ = a :=
+begin
+        cases v,
+        simp [vector.cons, vector.nth, *],
+end
 
 lemma all_states_equiv {n : ℕ} (s1 s2 : validstate n) : multi_step s1 s2 :=
 begin
