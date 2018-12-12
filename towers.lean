@@ -276,7 +276,6 @@ begin
                 apply n_ih,
             end,
 
-
         -- s2 ~ [y0, z, ..., z]
         have proppp2 : list.length s2_val_tl = n_n := begin
             cases s2_property,
@@ -291,7 +290,8 @@ begin
             end,
 
         have small_step : one_step (vector.cons s1_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n))
-            (vector.cons s2_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n)) := begin
+            (vector.cons s2_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n)) :=
+        begin
             rw one_step,
 
             apply exists.intro (zero_fin n_n),
@@ -303,38 +303,46 @@ begin
                     refl,
                 },
                 {
+                    have future_lemma : ∀ a k idx, vector.nth (vector.repeat a k) idx = a := sorry,
                     intros j h,
                     rw zero_fin at h,
+                    cases j,
+                    cases j_val,
+                    {
+                        cases h, -- j_val of type succ
+                    },
                     apply and.intro,
                     {
-                        cases j,
-                        cases j_val,
+                        rw ←fin.succ,
                         {
-                            cases h, -- j_val of type succ
+                            rw (vector_nth_helper),
+                            rw future_lemma _ n_n _,
+                            exact (third_column_unused s1_val_hd s2_val_hd).right
                         },
                         {
-                            rw ←fin.succ,
-                            {
-                                rw (vector_nth_helper),
-                                have future_lemma : ∀ a k idx, vector.nth (vector.repeat a k) idx = a := sorry,
-                                rw future_lemma _ n_n _,
-                                exact (third_column_unused s1_val_hd s2_val_hd).right
-                            },
-                            {
-                                exact nat.lt_of_succ_lt_succ j_is_lt
-                            }
-                        },
+                            exact nat.lt_of_succ_lt_succ j_is_lt
+                        }
                     },
                     {
-                        sorry
+                        rw ←fin.succ,
+                        {
+                            rw [vector_nth_helper],
+                            --cases (vector.cons s1_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n)),
+                            rw zero_fin,
+                            sorry
+                            -- rw vector.nth,
+                            -- simp *,
+                            -- sorry
+                        },
+                        {
+                            exact nat.lt_of_succ_lt_succ j_is_lt
+                        }
                     }
                 }
-            }            
+            }
         end,
         
-        apply refl_trans.tail,
-
-        sorry
+        exact multi_step_transitive (refl_trans.tail s1_equiv_s10zzz small_step) (multi_step_symmetric s2_equiv_s20zzz),
     }
 end
 
