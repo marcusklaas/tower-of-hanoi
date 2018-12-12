@@ -208,8 +208,55 @@ begin
     }
 end
 
-#check nat.le
-#check fin.succ
+#check list.repeat
+
+lemma nth_of_list_repeat {α : Type} (a : α) (i n : ℕ) (h : i < list.length (list.repeat a n))
+    : list.nth_le (list.repeat a n) i h = a :=
+begin
+    induction i generalizing n;
+    {
+        cases n,
+        {
+            cases h,
+        },
+        {
+            simp *,
+        }
+    }
+end
+
+lemma nth_of_repeat {α : Type} {n : ℕ} (i : fin n) (a : α)
+    : vector.nth (vector.repeat a n) i = a :=
+begin
+    cases n,
+    {
+        cases i,
+        cases i_is_lt,
+    },
+    {
+        cases i,
+        induction i_val,
+        {
+            refl,
+        },
+        {
+            simp [vector.repeat, vector.nth],
+            have i_lt_n := nat.lt_of_succ_lt_succ i_is_lt,
+            have len_repeat_n : ∀ k, list.length (list.repeat a k) = k := begin
+                intro k,
+                induction k;
+                simp *,
+            end,
+            rw ←(len_repeat_n n) at i_lt_n,
+            exact nth_of_list_repeat a i_val_n n i_lt_n,
+        }
+    }    
+end
+
+-- TODO: can we do without the lt arg?
+lemma zeroth_of_cons {α : Type} {n : ℕ} (a : α) (v : vector α n) (lt : 0 < nat.succ n)
+    : vector.nth (vector.cons a v) ⟨0, lt⟩ = a
+    := sorry              
 
 lemma all_states_equiv {n : ℕ} (s1 s2 : validstate n) : multi_step s1 s2 :=
 begin
@@ -303,7 +350,6 @@ begin
                     refl,
                 },
                 {
-                    have future_lemma : ∀ a k idx, vector.nth (vector.repeat a k) idx = a := sorry,
                     intros j h,
                     rw zero_fin at h,
                     cases j,
@@ -315,8 +361,7 @@ begin
                     {
                         rw ←fin.succ,
                         {
-                            rw (vector_nth_helper),
-                            rw future_lemma _ n_n _,
+                            rw [vector_nth_helper, nth_of_repeat],
                             exact (third_column_unused s1_val_hd s2_val_hd).right
                         },
                         {
@@ -326,13 +371,8 @@ begin
                     {
                         rw ←fin.succ,
                         {
-                            rw [vector_nth_helper],
-                            --cases (vector.cons s1_val_hd (vector.repeat (third_column s1_val_hd s2_val_hd) n_n)),
-                            rw zero_fin,
-                            sorry
-                            -- rw vector.nth,
-                            -- simp *,
-                            -- sorry
+                            rw [vector_nth_helper, zero_fin, nth_of_repeat, zeroth_of_cons],
+                            exact (third_column_unused _ _).left
                         },
                         {
                             exact nat.lt_of_succ_lt_succ j_is_lt
@@ -342,7 +382,7 @@ begin
             }
         end,
         
-        exact multi_step_transitive (refl_trans.tail s1_equiv_s10zzz small_step) (multi_step_symmetric s2_equiv_s20zzz),
+        exact multi_step_transitive (refl_trans.tail s1_equiv_s10zzz small_step) (multi_step_symmetric s2_equiv_s20zzz)
     }
 end
 
