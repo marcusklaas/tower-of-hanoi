@@ -37,38 +37,6 @@ begin
     refl -- hell yeah boiiii
 end
 
--- TODO: make α and n variables?
-lemma list_update_nth_idempotent {α : Type} (l : list α) (i : ℕ) (a : α)
-    : list.update_nth l i a = list.update_nth (list.update_nth l i a) i a :=
-begin
-    induction l generalizing i, -- awwww yisss, generalizing ftw
-    {
-        refl
-    },
-    {
-        cases i,
-        {
-            refl,
-        },
-        {
-            simp [list.update_nth, *],
-            exact l_ih i
-        }
-    }
-end
-
--- FIXME: these lemmas are likely useless lol
-lemma update_nth_idempotent {α : Type} {n : ℕ} (v : vector α n) (i : fin n) (a : α)
-    : update_nth v i a = update_nth (update_nth v i a) i a :=
-begin
-    cases v,
-    repeat { rw [update_nth] } ,
-    cases i,
-    simp *,
-    have yolo := list_update_nth_idempotent v_val i_val a,
-    sorry -- ARGH, feels like we're close!
-end
-
 lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
     : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
 begin
