@@ -67,6 +67,18 @@ def one_step {n : ℕ} : validstate n → validstate n → Prop
 
 def multi_step {n : ℕ} : validstate n → validstate n → Prop := refl_trans one_step
 
+lemma update_reversibility {n : ℕ} (i : fin n) (a : column) (s1 s2 : validstate n) (h : s1 = update_nth s2 i a)
+    : s2 = update_nth s1 i a :=
+sorry
+
+lemma jth_after_update_i {n : ℕ} (i j : fin n) (a : column) (s : validstate n) (h : i < j)
+    : vector.nth (update_nth s i a) j = vector.nth s j :=
+sorry
+
+lemma ith_after_update_i {n : ℕ} (i : fin n) (a : column) (s : validstate n)
+    : vector.nth (update_nth s i a) i = a :=
+sorry
+
 lemma one_step_symm {n : ℕ} {s1 s2 : validstate n} (h: one_step s1 s2) : one_step s2 s1 :=
 begin
     cases h,
@@ -78,21 +90,20 @@ begin
     apply exists.intro h_h_w,
     apply exists.intro,
     {
-        rw movestone,
-        -- rw h_h_h_h,
-        -- rw ←update_nth_idempotent,
-        sorry
+        exact update_reversibility h_w h_h_w s2 s1 h_h_h_h,
     },
     {
         intros j hj,
         specialize h_h_h_w j hj,
         cases h_h_h_w,
+        rw [h_h_h_h, jth_after_update_i _ _ _ _ hj],
         apply and.intro,
         {
-            sorry
+            assumption
         },
         {
-            sorry
+            rw ith_after_update_i,
+            assumption
         }
     }
 end
