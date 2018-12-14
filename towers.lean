@@ -1,6 +1,8 @@
 
 import data.vector
 
+variables {n : ℕ} {α : Type}
+
 inductive column
 | left : column
 | middle : column
@@ -11,21 +13,18 @@ inductive column
 -- okay so we encode valid states as fixed length sequences
 def validstate (n : ℕ) := vector column n
 
-#check lt_irrefl
-#check linear_order
-#check well_founded
-#check nat.add_one_ne_zero
-
-lemma update_preserve_length {α : Type} {a : α} (l : list α) : 
+lemma update_preserve_length {a : α} (l : list α) : 
     ∀ i, list.length l = list.length (list.update_nth l i a) :=
 begin
     induction l; intro i; cases i; simp [list.update_nth, list.length]; rw l_ih i
 end
 
-def update_nth {n : ℕ} {α : Type} : vector α n → fin n → α → vector α n
-| ⟨l, h⟩ i a := ⟨ list.update_nth l i.val a, by { rw ←(update_preserve_length l), exact h } ⟩ 
+def update_nth : vector α n → fin n → α → vector α n
+| v i a := ⟨ list.update_nth v.val i.val a, by { rw ←(update_preserve_length v.val), exact v.property } ⟩ 
 
-lemma update_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a b : α)
+def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, dec_trivial⟩
+
+lemma update_nth_helper (v : vector α n) (i : fin n) (a b : α)
     : vector.cons b (update_nth v i a) = update_nth (vector.cons b v) (fin.succ i) a :=
 begin
     cases v,
@@ -33,11 +32,10 @@ begin
     cases i,
     rw fin.succ,
     simp [vector.cons],
-    rw update_nth,
     refl -- hell yeah boiiii
 end
 
-lemma vector_nth_helper {n : ℕ} {α : Type} (v : vector α n) (i : fin n) (a : α)
+lemma vector_nth_helper (v : vector α n) (i : fin n) (a : α)
     : vector.nth (vector.cons a v) (fin.succ i) = vector.nth v i :=
 begin
     induction n,
@@ -53,7 +51,7 @@ begin
     } -- awww yiss
 end
 
-def movestone {n : ℕ} (s : validstate n) (i : fin n) (dest : column)
+def movestone (s : validstate n) (i : fin n) (dest : column)
     (valid_move: ∀j, j > i → vector.nth s j ≠ dest ∧ vector.nth s j ≠ vector.nth s i) : validstate n :=
 update_nth s i dest
 
@@ -62,60 +60,186 @@ inductive refl_trans {α : Sort*} (r : α → α → Prop) (a : α) : α → Pro
 | refl {} : refl_trans a
 | tail {b c} : refl_trans b → r b c → refl_trans c
 
-def one_step {n : ℕ} : validstate n → validstate n → Prop
+def one_step : validstate n → validstate n → Prop
 | s1 s2 := ∃ (i : fin n) (dest : column) pf, s2 = movestone s1 i dest pf
 
-def multi_step {n : ℕ} : validstate n → validstate n → Prop := refl_trans one_step
+def multi_step : validstate n → validstate n → Prop := refl_trans one_step
 
-lemma update_reversibility {n : ℕ} (i : fin n) (a : column) (s1 s2 : validstate n) (h : s1 = update_nth s2 i a)
-    : s2 = update_nth s1 i a :=
-sorry
-
-lemma jth_after_update_i {n : ℕ} (i j : fin n) (a : column) (s : validstate n) (h : i < j)
-    : vector.nth (update_nth s i a) j = vector.nth s j :=
-sorry
-
-lemma ith_after_update_i {n : ℕ} (i : fin n) (a : column) (s : validstate n)
-    : vector.nth (update_nth s i a) i = a :=
-sorry
-
-lemma one_step_symm {n : ℕ} {s1 s2 : validstate n} (h: one_step s1 s2) : one_step s2 s1 :=
+lemma vector.eq_iff {n} {a b : vector α n} : a = b ↔ a.1 = b.1 :=
 begin
-    cases h,
-    cases h_h,
-    cases h_h_h,
-    simp [movestone, update_nth] at h_h_h_h,
-    rw one_step,
-    apply exists.intro h_w,
-    apply exists.intro h_h_w,
-    apply exists.intro,
+  cases a; cases b,
+  split,
+  { intro h, exact congr_arg subtype.val h },
+  { apply vector.eq }
+end
+
+lemma update_with_self (l : list α) (i : ℕ) (h : i < list.length l) :
+    l = list.update_nth l i (list.nth_le l i h) :=
+begin
+    induction l generalizing i,
     {
-        exact update_reversibility h_w h_h_w s2 s1 h_h_h_h,
+        cases h,
     },
     {
-        intros j hj,
-        specialize h_h_h_w j hj,
-        cases h_h_h_w,
-        rw [h_h_h_h, jth_after_update_i _ _ _ _ hj],
-        apply and.intro,
+        cases i,
         {
-            assumption
+            simp [list.update_nth],
         },
         {
-            rw ith_after_update_i,
-            assumption
+            simp [list.update_nth],
+            apply l_ih,
         }
     }
 end
 
-lemma multi_step_transitive {n : ℕ} {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
+lemma conseq_updates (l : list α) (a b : α) (i : ℕ) :
+    list.update_nth (list.update_nth l i a) i b = list.update_nth l i b :=
+begin
+    induction l generalizing i,
+    {
+        refl,
+    },
+    {
+        cases i,
+        {
+            refl,
+        },
+        {
+            simp [list.update_nth],
+            apply l_ih
+        }
+    }
+end
+
+lemma update_reversibility (i : fin n) (a : column) (s1 s2 : validstate n) (h : s1 = update_nth s2 i a) :
+  s2 = update_nth s1 i (vector.nth s2 i) :=
+begin
+    apply vector.eq,
+    change s2.val = list.update_nth s1.val (i.val) (vector.nth s2 i),
+    cases s2,
+    cases s1,
+    cases i,
+    simp [vector.nth],
+    rw ←s2_property at i_is_lt,
+    rw update_nth at h,
+    have yolo := (iff.elim_left vector.eq_iff) h,
+    simp at yolo,
+    induction s1_val generalizing i_val s2_val n,
+    {
+        rw ← s1_property at i_is_lt,
+        cases i_is_lt,
+    },
+    {
+        rw yolo,
+        rw conseq_updates,
+        exact update_with_self _ _ _
+    }
+end
+
+lemma fin_pred (j : fin (nat.succ n)) (k : fin n) (h : j > fin.succ k)
+    : ∃ (i : fin n), fin.succ i = j ∧ i > k :=
+sorry
+
+lemma jth_after_update_i (i j : fin n) (a : column) (s : validstate n) (h : i < j)
+    : vector.nth (update_nth s i a) j = vector.nth s j :=
+begin
+    cases s,
+    induction s_val generalizing n i j,
+    {
+        simp at s_property,
+        cases i,
+        rw ←s_property at i_is_lt,
+        cases i_is_lt,
+    },
+    {
+        cases n,
+        {
+            cases i,
+            cases i_is_lt,
+        },
+        {
+            have yolo : list.length s_val_tl = n := begin
+                    simp [nat.succ_eq_add_one] at s_property,
+                    rw nat.add_comm at s_property,
+                    exact nat.add_right_cancel s_property
+            end,
+            cases i,
+            cases i_val,
+            sorry
+        }
+    }
+end
+
+lemma ith_after_update_i (i : fin n) (a : column) (s : validstate n)
+    : vector.nth (update_nth s i a) i = a :=
+begin
+    cases i,
+    cases s,
+    induction s_val generalizing n i_val,
+    {
+        rw ←s_property at i_is_lt,
+        cases i_is_lt,
+    },
+    {
+        cases n,
+        {
+            cases i_is_lt,
+        },
+        {
+            cases i_val,
+            {
+                simp *,
+                refl,
+            },
+            {
+                simp [vector.nth, update_nth, list.update_nth, *],
+                apply s_val_ih,
+                {
+                    exact nat.lt_of_succ_lt_succ i_is_lt,
+                },
+                {
+                    simp [nat.succ_eq_add_one] at s_property,
+                    rw nat.add_comm at s_property,
+                    exact nat.add_right_cancel s_property
+                }
+            }
+        }
+    }
+end
+
+lemma one_step_symm {s1 s2 : validstate n} (h: one_step s1 s2) : one_step s2 s1 :=
+begin
+    cases h,
+    cases h_h,
+    cases h_h_h,
+    cases n,
+    {
+        cases h_w,
+        cases h_w_is_lt,
+    },
+    simp [movestone, update_nth] at h_h_h_h,
+    rw one_step,
+    apply exists.intro h_w,
+    apply exists.intro (vector.nth s1 h_w),
+    apply exists.intro,
+    {
+        exact update_reversibility _ _ _ _ h_h_h_h,
+    },
+    {
+        intros j hj,
+        rw [h_h_h_h, jth_after_update_i _ _ _ _ hj, ith_after_update_i],
+        exact and.swap (h_h_h_w j hj)
+    }
+end
+
+lemma multi_step_transitive {a b c : validstate n} (hab : multi_step a b) (hbc : multi_step b c) : multi_step a c :=
 begin
   induction hbc,
   case refl_trans.refl { assumption },
   case refl_trans.tail : c d hbc hcd hac { exact hac.tail hcd }
 end
 
-lemma multi_step_symmetric {n : ℕ} {a b : validstate n} (hab : multi_step a b) : multi_step b a :=
+lemma multi_step_symmetric {a b : validstate n} (hab : multi_step a b) : multi_step b a :=
 begin
     induction hab,
     {
@@ -146,13 +270,7 @@ begin
     }
 end
 
-def zero_fin (n : ℕ) : fin (nat.succ n) := ⟨0, dec_trivial⟩
-
-lemma fin_pred {n : ℕ} (j : fin (nat.succ n)) (k : fin n) (h : j > fin.succ k)
-    : ∃ (i : fin n), fin.succ i = j ∧ i > k
-:= sorry
-
-lemma equiv_cons {n : ℕ} (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
+lemma equiv_cons (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
     : multi_step (vector.cons a s1) (vector.cons a s2) :=
 begin
     induction h,
@@ -185,7 +303,7 @@ begin
     }
 end
 
-lemma nth_of_list_repeat {α : Type} (a : α) (i n : ℕ) (h : i < list.length (list.repeat a n))
+lemma nth_of_list_repeat (a : α) (i n : ℕ) (h : i < list.length (list.repeat a n))
     : list.nth_le (list.repeat a n) i h = a :=
 begin
     induction i generalizing n;
@@ -200,7 +318,7 @@ begin
     }
 end
 
-lemma nth_of_repeat {α : Type} {n : ℕ} (i : fin n) (a : α)
+lemma nth_of_repeat (i : fin n) (a : α)
     : vector.nth (vector.repeat a n) i = a :=
 begin
     cases n,
@@ -229,14 +347,14 @@ begin
 end
 
 -- TODO: can we do without the lt arg?
-lemma zeroth_of_cons {α : Type} {n : ℕ} (a : α) (v : vector α n) (lt : 0 < nat.succ n)
+lemma zeroth_of_cons (a : α) (v : vector α n) (lt : 0 < nat.succ n)
     : vector.nth (vector.cons a v) ⟨0, lt⟩ = a :=
 begin
         cases v,
         simp [vector.cons, vector.nth, *],
 end
 
-lemma all_states_equiv {n : ℕ} (s1 s2 : validstate n) : multi_step s1 s2 :=
+lemma all_states_equiv (s1 s2 : validstate n) : multi_step s1 s2 :=
 begin
     induction n,
     {   
