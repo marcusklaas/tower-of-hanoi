@@ -28,11 +28,8 @@ lemma update_nth_helper (v : vector α n) (i : fin n) (a b : α)
     : vector.cons b (update_nth v i a) = update_nth (vector.cons b v) (fin.succ i) a :=
 begin
     cases v,
-    simp [update_nth, *],
     cases i,
-    rw fin.succ,
-    simp [vector.cons],
-    refl -- hell yeah boiiii
+    refl
 end
 
 lemma vector_nth_helper (v : vector α n) (i : fin n) (a : α)
@@ -46,9 +43,8 @@ begin
     {
         cases i,
         cases v,
-        simp [fin.succ, vector.cons, vector.nth],
         refl
-    } -- awww yiss
+    }
 end
 
 def movestone (s : validstate n) (i : fin n) (dest : column)
@@ -150,34 +146,38 @@ begin
     }
 end
 
-lemma jth_after_update_i (i j : fin n) (a : column) (s : validstate n) (h : i < j)
-    : vector.nth (update_nth s i a) j = vector.nth s j :=
+-- this h₃ we can actually construct from the arguments, but oh well
+lemma list_jth_after_update_i (l : list α) (i j : ℕ) (a : α) (h₁ : j < list.length l) (h₃ : j < list.length (list.update_nth l i a)) (h₂ : i < j) :
+    list.nth_le (list.update_nth l i a) j h₃ = list.nth_le l j h₁ :=
 begin
-    cases s,
-    induction s_val generalizing n i j,
+    induction l generalizing i j,
     {
-        simp at s_property,
-        cases i,
-        rw ←s_property at i_is_lt,
-        cases i_is_lt,
+        cases h₁
     },
     {
-        cases n,
+        cases i; cases j,
         {
-            cases i,
-            cases i_is_lt,
+            cases h₂,
         },
         {
-            have yolo : list.length s_val_tl = n := begin
-                    simp [nat.succ_eq_add_one] at s_property,
-                    rw nat.add_comm at s_property,
-                    exact nat.add_right_cancel s_property
-            end,
-            cases i,
-            cases i_val,
-            sorry
+            simp [list.update_nth],
+        },
+        {
+            cases h₂,
+        },
+        {
+            simp [list.update_nth],
+            apply l_ih,
+            exact nat.lt_of_succ_lt_succ h₂,
         }
     }
+end
+
+lemma jth_after_update_i (i j : fin n) (a : column) (s : validstate n) (h : i < j) : 
+    vector.nth (update_nth s i a) j = vector.nth s j :=
+begin
+    cases s,
+    exact list_jth_after_update_i _ _ _ _ _ _ h
 end
 
 lemma ith_after_update_i (i : fin n) (a : column) (s : validstate n)
@@ -274,10 +274,7 @@ begin
     intros c1 c2,
     cases c1;
     cases c2;
-    {
-        apply and.intro,
-        repeat { simp [third_column] }
-    }
+    simp [third_column],
 end
 
 lemma equiv_cons (s1 s2 : validstate n) (a : column) (h : multi_step s1 s2)
@@ -303,12 +300,9 @@ begin
         {
             -- repackage IH pf
             intros j h2,
-            rw vector_nth_helper,
-            have yolo := fin_pred j h_a_1_w h2,
-            cases yolo,
-            rw ←yolo_h.left,
-            rw vector_nth_helper,
-            exact (h_a_1_h_h_w yolo_w yolo_h.right)
+            cases fin_pred j h_a_1_w h2,
+            rw [vector_nth_helper, ←h.left, vector_nth_helper],
+            exact (h_a_1_h_h_w w h.right)
         }
     }
 end
@@ -346,8 +340,6 @@ begin
             simp [vector.repeat, vector.nth],
             have i_lt_n := nat.lt_of_succ_lt_succ i_is_lt,
             have len_repeat_n : ∀ k, list.length (list.repeat a k) = k := begin
-                intro k,
-                induction k;
                 simp *,
             end,
             rw ←(len_repeat_n n) at i_lt_n,
@@ -356,12 +348,11 @@ begin
     }    
 end
 
--- TODO: can we do without the lt arg?
-lemma zeroth_of_cons (a : α) (v : vector α n) (lt : 0 < nat.succ n)
-    : vector.nth (vector.cons a v) ⟨0, lt⟩ = a :=
+lemma zeroth_of_cons (a : α) (v : vector α n)
+    : vector.nth (vector.cons a v) ⟨0, dec_trivial⟩ = a :=
 begin
-        cases v,
-        simp [vector.cons, vector.nth, *],
+    cases v,
+    refl
 end
 
 lemma all_states_equiv (s1 s2 : validstate n) : multi_step s1 s2 :=
@@ -491,7 +482,6 @@ begin
         exact multi_step_transitive (refl_trans.tail s1_equiv_s10zzz small_step) (multi_step_symmetric s2_equiv_s20zzz)
     }
 end
-
 
 theorem towers_hanoi_solvable : ∀ n : ℕ, multi_step (vector.repeat column.left n) (vector.repeat column.right n) :=
     λ n, all_states_equiv (vector.repeat column.left n) (vector.repeat column.right n)
