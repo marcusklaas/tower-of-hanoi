@@ -138,7 +138,17 @@ end
 
 lemma fin_pred (j : fin (nat.succ n)) (k : fin n) (h : j > fin.succ k)
     : ∃ (i : fin n), fin.succ i = j ∧ i > k :=
-sorry
+begin
+    cases j,
+    cases j_val,
+    {
+        cases h,        
+    },
+    {
+        cases k,
+        exact ⟨ ⟨ j_val, nat.lt_of_succ_lt_succ j_is_lt ⟩, ⟨ rfl, nat.lt_of_succ_lt_succ h ⟩ ⟩
+    }
+end
 
 lemma jth_after_update_i (i j : fin n) (a : column) (s : validstate n) (h : i < j)
     : vector.nth (update_nth s i a) j = vector.nth s j :=
@@ -217,7 +227,7 @@ begin
         cases h_w,
         cases h_w_is_lt,
     },
-    simp [movestone, update_nth] at h_h_h_h,
+    rw movestone at h_h_h_h,
     rw one_step,
     apply exists.intro h_w,
     apply exists.intro (vector.nth s1 h_w),
